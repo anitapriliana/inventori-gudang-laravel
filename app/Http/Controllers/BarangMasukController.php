@@ -63,22 +63,29 @@ class BarangMasukController extends Controller
     /**
      * Menyimpan data barang masuk (dengan DB Transaction)
      */
+    /**
+     * Menyimpan data barang masuk (dengan DB Transaction)
+     */
     public function store(Request $request)
     {
         $request->validate([
             'barang_id'           => 'required|exists:barang,id',
             'jumlah'              => 'required|numeric|min:0.01',
-            'tanggal'             => 'required|date',
-            'tanggal_kadaluwarsa' => 'nullable|date_format:Y-m',
+            'tanggal'             => 'required', // Hapus 'date' agar bisa kita parse manual pakai Carbon
+            'tanggal_kadaluwarsa' => 'nullable',
         ]);
 
-        // Konversi bulan kadaluwarsa (YYYY-MM) ke akhir bulan
-        $tanggalKadaluwarsa = $request->tanggal_kadaluwarsa
-            ? Carbon::createFromFormat('Y-m', $request->tanggal_kadaluwarsa)->endOfMonth()->toDateString()
-            : null;
-
         try {
-            DB::transaction(function () use ($request, $tanggalKadaluwarsa) {
+            // 1. Konversi tanggal masuk dari format d/m/Y (Blade) ke Y-m-d (MySQL)
+            $tanggalMasuk = Carbon::createFromFormat('d/m/Y', $request->tanggal)->format('Y-m-d');
+
+            // 2. Konversi bulan kadaluwarsa (YYYY-MM) ke tanggal akhir bulan (YYYY-MM-DD)
+            $tanggalKadaluwarsa = null;
+            if ($request->filled('tanggal_kadaluwarsa')) {
+                $tanggalKadaluwarsa = Carbon::createFromFormat('Y-m', $request->tanggal_kadaluwarsa)->endOfMonth()->toDateString();
+            }
+
+            DB::transaction(function () use ($request, $tanggalMasuk, $tanggalKadaluwarsa) {
                 // Lock data barang untuk cegah race condition
                 $barang = Barang::lockForUpdate()->findOrFail($request->barang_id);
 
@@ -87,7 +94,7 @@ class BarangMasukController extends Controller
                     'barang_id'           => $barang->id,
                     'jumlah'              => $request->jumlah,
                     'sisa_jumlah'         => $request->jumlah,
-                    'tanggal'             => $request->tanggal,
+                    'tanggal'             => $tanggalMasuk,
                     'tanggal_kadaluwarsa' => $tanggalKadaluwarsa,
                 ]);
 

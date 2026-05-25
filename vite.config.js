@@ -1,23 +1,27 @@
-import { defineConfig } from 'vite';
-import laravel from 'laravel-vite-plugin';
+import { defineConfig } from "vite";
+import laravel from "laravel-vite-plugin";
 
-// konfigurasi Vite server watcher untuk docker
+/**
+ * Konfigurasi Vite khusus Docker / Laravel Sail
+ * Terminal Tujuan: Tidak ada (File vite.config.js)
+ */
 export default defineConfig({
     plugins: [
         laravel({
-            input: ['resources/css/app.css', 'resources/js/app.js'],
+            input: ["resources/css/app.css", "resources/js/app.js"],
             refresh: true,
         }),
     ],
-    // Tambahkan blok server di bawah ini untuk Docker & Sail
     server: {
-        host: '0.0.0.0', // Membuka akses server Vite agar bisa dijangkau browser host
+        host: "0.0.0.0", // Supaya Vite menerima request dari luar container
+        port: 5173,
         hmr: {
-            host: 'localhost', // Mengarahkan HMR browser ke localhost
+            host: "localhost", // Agar browser mengakses HMR via localhost
         },
         watch: {
-            usePolling: true, // Memaksa Vite mengecek perubahan file secara berkala di Docker/WSL
-            interval: 100, // Cek perubahan file setiap 100ms
+            usePolling: true,
+            interval: 100, // Cek perubahan tiap 100ms
+            ignored: ["**/node_modules/**", "**/vendor/**"], // JANGAN scan folder berat ini!
         },
     },
 });

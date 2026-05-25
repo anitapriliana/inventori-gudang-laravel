@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Barang;
 use App\Models\BarangKeluar;
 use App\Models\Proyek;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -26,6 +27,8 @@ class BarangKeluarController extends Controller
             ->latest()
             ->paginate(10)
             ->withQueryString();
+
+
 
         return view('barang_keluar.index', compact('data'));
     }
@@ -80,13 +83,18 @@ class BarangKeluarController extends Controller
         $request->validate([
             'barang_id'  => 'required|exists:barang,id',
             'jumlah'     => 'required|numeric|min:0.01',
-            'tanggal'    => 'required|date',
+            'tanggal'    => 'required|date_format:d/m/Y', // format dari datepicker
             'proyek_id'  => 'nullable|exists:proyeks,id',
             'keterangan' => 'nullable|string|max:255',
+        ], [
+            'tanggal.date_format' => 'Format tanggal harus dd/mm/yyyy.',
         ]);
 
+        // ubah d/m/Y ke Y-m-d biar kebaca benar di database
+        $tanggal = Carbon::createFromFormat('d/m/Y', $request->tanggal)->format('Y-m-d');
+
         try {
-            DB::transaction(function () use ($request) {
+            DB::transaction(function () use ($request, $tanggal) {
                 $barang = Barang::lockForUpdate()->findOrFail($request->barang_id);
 
                 if ($barang->stok < $request->jumlah) {
@@ -97,7 +105,7 @@ class BarangKeluarController extends Controller
                     'barang_id'  => $request->barang_id,
                     'proyek_id'  => $request->proyek_id,
                     'jumlah'     => $request->jumlah,
-                    'tanggal'    => $request->tanggal,
+                    'tanggal'    => $tanggal,
                     'keterangan' => $request->keterangan,
                 ]);
 

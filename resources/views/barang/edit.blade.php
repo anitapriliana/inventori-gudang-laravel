@@ -104,6 +104,19 @@
                     @enderror
                 </div>
 
+                {{-- satuan --}}
+                <div>
+                    <label for="satuan" class="block text-sm font-medium text-slate-700 mb-2">
+                        Satuan
+                    </label>
+                    <input type="text" name="satuan" id="satuan" value="{{ old('satuan', $barang->satuan) }}"
+                        class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4C7A94] focus:border-[#4C7A94] transition-colors duration-150 @error('satuan') border-red-500 @enderror"
+                        required>
+                    @error('satuan')
+                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
                 {{-- gambar (baru, opsional) --}}
                 <div>
                     <label for="gambar" class="block text-sm font-medium text-slate-700 mb-2">

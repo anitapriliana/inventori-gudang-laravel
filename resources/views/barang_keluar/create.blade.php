@@ -77,16 +77,17 @@
 
             <div class="p-8 space-y-5">
 
-                {{-- tanggal --}}
+                {{-- tanggal (pilih dari kalender, tidak perlu ngetik) --}}
                 <div>
-                    <label for="tanggal" class="block text-sm font-medium text-slate-700 mb-2">
+                    <label class="block text-sm font-medium text-slate-700 mb-2">
                         Tanggal Keluar
                     </label>
-                    <input type="date" name="tanggal" id="tanggal" value="{{ old('tanggal', date('Y-m-d')) }}"
-                        class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4C7A94] focus:border-[#4C7A94] transition-colors duration-150 @error('tanggal') border-red-500 @enderror"
+                    <input type="text" name="tanggal" id="tanggal" value="{{ old('tanggal', date('d/m/Y')) }}"
+                        placeholder="Pilih tanggal" readonly
+                        class="datepicker w-full px-3 py-2 border border-slate-300 rounded-lg cursor-pointer bg-white focus:ring-2 focus:ring-[#4C7A94] focus:border-[#4C7A94] @error('tanggal') border-red-500 @enderror"
                         required>
                     @error('tanggal')
-                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                        <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
                     @enderror
                 </div>
 
@@ -263,7 +264,23 @@
     @endpush
 
     @push('scripts')
+        {{-- flatpickr css & js --}}
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+        <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
         <script>
+            // datepicker tanggal keluar: pilih dari kalender, nggak perlu ngetik
+            flatpickr("#tanggal", {
+                dateFormat: "d/m/Y",
+                defaultDate: "{{ old('tanggal', date('d/m/Y')) }}",
+                allowInput: false,
+                disableMobile: true,
+                // abis pilih tanggal, kalender nutup & langsung lanjut ke nama barang
+                onChange: function() {
+                    document.getElementById('nama_barang').focus();
+                }
+            });
+
             function setBarangId(nama) {
                 fetch(`/get-merk/${encodeURIComponent(nama)}`)
                     .then(response => response.json())
@@ -271,7 +288,13 @@
                         const merkSelect = document.getElementById('merk');
                         if (!merkSelect) return;
 
+                        // abaikan response lama kalau input nama barang udah berubah lagi
+                        if (nama !== document.getElementById('nama_barang').value) return;
+
                         merkSelect.innerHTML = '<option value="">-- Pilih Merk --</option>';
+                        // buka kunci dulu, nanti dikunci lagi kalau merk cuma satu
+                        merkSelect.disabled = false;
+                        merkSelect.classList.remove('bg-slate-100', 'cursor-not-allowed');
 
                         data.forEach(item => {
                             merkSelect.innerHTML += `
@@ -283,7 +306,17 @@
 
                         // reset hidden barang_id until merk chosen
                         document.getElementById('barang_id').value = '';
-                        updateStokInfo();
+
+                        // kalau merk cuma satu: hapus opsi "Pilih Merk", kepilih otomatis, dropdown dikunci
+                        if (data.length === 1) {
+                            merkSelect.remove(0);
+                            merkSelect.selectedIndex = 0;
+                            merkSelect.disabled = true;
+                            merkSelect.classList.add('bg-slate-100', 'cursor-not-allowed');
+                            setBarangIdByMerk();
+                        } else {
+                            updateStokInfo();
+                        }
                     });
             }
 
@@ -352,9 +385,9 @@
                 // AGAR USER BEBAS KETIK ANGKA DESIMAL (0.5, 0.2, DLL)
             }
 
-            // auto-focus ke field tanggal saat halaman pertama kali dimuat
+            // auto-focus ke nama barang saat halaman dimuat (tanggal sudah default hari ini)
             document.addEventListener('DOMContentLoaded', function() {
-                document.getElementById('tanggal')?.focus();
+                document.getElementById('nama_barang')?.focus();
 
                 const merkSelect = document.getElementById('merk');
                 if (merkSelect) {

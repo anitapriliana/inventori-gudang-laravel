@@ -8,16 +8,20 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     {{-- Page Title --}}
-    <title>{{ config('app.name', 'Inventori Gudang') }} - @yield('title', 'Dashboard')</title>
+    <title>{{ config('app.name', 'ideaform') }} - @yield('title', 'Dashboard')</title>
 
     {{-- Icon Browser --}}
     <link rel="icon" type="image/x-icon" href="{{ asset('putih.ico') }}">
 
-    {{-- Styles (Tailwind CSS via Vite) --}}
-    @vite('resources/css/app.css')
+    {{-- Styles & Scripts (Vite HMR) --}}
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     {{-- Alpine.js --}}
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js" defer></script>
+
+    {{-- Flatpickr --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
     {{-- Custom Styles --}}
     @stack('styles')

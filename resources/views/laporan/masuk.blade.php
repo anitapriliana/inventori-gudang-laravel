@@ -21,7 +21,8 @@
                     <label class="block text-sm font-medium text-slate-700 mb-2">
                         Filter Tanggal
                     </label>
-                    <input type="date" name="tanggal" value="{{ request('tanggal') }}" onchange="this.form.submit()"
+                    <input type="text" name="tanggal" id="filter_tanggal" value="{{ request('tanggal') }}"
+                        placeholder="Pilih tanggal..."
                         class="w-full sm:w-auto px-4 py-2.5 text-sm text-slate-700 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4C7A94] focus:border-[#4C7A94] transition-colors duration-150">
                 </div>
 
@@ -74,9 +75,9 @@
                         @forelse($data as $index => $d)
                             <tr class="hover:bg-slate-50 transition-colors duration-150">
 
-                                {{-- nomor --}}
+                                {{-- nomor (lanjut antar halaman) --}}
                                 <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-slate-500 tabular-nums">
-                                    {{ $index + 1 }}
+                                    {{ $data->firstItem() + $loop->index }}
                                 </td>
 
                                 {{-- kode barang --}}
@@ -96,7 +97,7 @@
 
                                 {{-- jumlah + satuan --}}
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-slate-500 tabular-nums">
-                                    {{ $d->jumlah }} {{ $d->barang->satuan ?? '-' }}
+                                    {{ floatval($d->total_jumlah ?? $d->jumlah) }} {{ $d->barang->satuan ?? '-' }}
                                 </td>
 
                                 {{-- tanggal --}}
@@ -132,5 +133,74 @@
             </div>
         </div>
 
+        {{-- pagination (di luar tabel, rata tengah) --}}
+        @if ($data->hasPages())
+            @php
+                // memastikan query string (seperti filter tanggal) tetap terbawa
+                $data->appends(request()->query());
+
+                // class tombol, disalin persis dari desain lo
+                $btnPrev =
+                    'rounded-full border border-slate-300 py-2 px-3 text-center text-sm transition-all shadow-sm hover:shadow-lg text-slate-600 hover:text-white hover:bg-slate-800 hover:border-slate-800 focus:text-white focus:bg-slate-800 focus:border-slate-800 active:border-slate-800 active:text-white active:bg-slate-800 disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none ml-2';
+                $btnNext =
+                    'min-w-9 rounded-full border border-slate-300 py-2 px-3 text-center text-sm transition-all shadow-sm hover:shadow-lg text-slate-600 hover:text-white hover:bg-slate-800 hover:border-slate-800 focus:text-white focus:bg-slate-800 focus:border-slate-800 active:border-slate-800 active:text-white active:bg-slate-800 disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none ml-2';
+                $btnAngka =
+                    'min-w-9 rounded-full border border-slate-300 py-2 px-3.5 text-center text-sm transition-all shadow-sm hover:shadow-lg text-slate-600 hover:text-white hover:bg-slate-800 hover:border-slate-800 focus:text-white focus:bg-slate-800 focus:border-slate-800 active:border-slate-800 active:text-white active:bg-slate-800 disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none ml-2';
+                $btnAktif =
+                    'min-w-9 rounded-full bg-slate-800 py-2 px-3.5 border border-transparent text-center text-sm text-white transition-all shadow-md hover:shadow-lg focus:bg-slate-700 focus:shadow-none active:bg-slate-700 hover:bg-slate-700 active:shadow-none disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none ml-2';
+
+                // tampilkan maksimal 5 nomor di sekitar halaman aktif
+                $awal = max(1, $data->currentPage() - 2);
+                $akhir = min($data->lastPage(), $data->currentPage() + 2);
+            @endphp
+
+            <nav role="navigation" aria-label="Pagination" class="flex justify-center">
+                <div class="flex space-x-1">
+
+                    {{-- prev (di halaman pertama jadi button disabled) --}}
+                    @if ($data->onFirstPage())
+                        <button type="button" disabled class="{{ $btnPrev }}">Prev</button>
+                    @else
+                        <a href="{{ $data->previousPageUrl() }}" class="{{ $btnPrev }}">Prev</a>
+                    @endif
+
+                    {{-- nomor halaman --}}
+                    @for ($i = $awal; $i <= $akhir; $i++)
+                        @if ($i == $data->currentPage())
+                            <span aria-current="page" class="{{ $btnAktif }}">{{ $i }}</span>
+                        @else
+                            <a href="{{ $data->url($i) }}" class="{{ $btnAngka }}">{{ $i }}</a>
+                        @endif
+                    @endfor
+
+                    {{-- next (di halaman terakhir jadi button disabled) --}}
+                    @if ($data->hasMorePages())
+                        <a href="{{ $data->nextPageUrl() }}" class="{{ $btnNext }}">Next</a>
+                    @else
+                        <button type="button" disabled class="{{ $btnNext }}">Next</button>
+                    @endif
+                </div>
+            </nav>
+        @endif
     </div>
+
+    @push('scripts')
+        {{-- flatpickr css & js --}}
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+        <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+        <script>
+            // datepicker filter: tampil d/m/Y, kirim Y-m-d, auto submit saat dipilih
+            flatpickr("#filter_tanggal", {
+                altInput: true,
+                altFormat: "d/m/Y",
+                dateFormat: "Y-m-d",
+                defaultDate: "{{ request('tanggal') }}" || null,
+                altInputClass: "w-full sm:w-auto px-4 py-2.5 text-sm text-slate-700 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4C7A94] focus:border-[#4C7A94] transition-colors duration-150",
+                onChange: function(selectedDates, dateStr, instance) {
+                    instance.input.form.submit();
+                }
+            });
+        </script>
+    @endpush
 @endsection

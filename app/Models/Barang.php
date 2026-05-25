@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Kategori;
 use App\Models\BarangMasuk;
+use App\Models\BarangKeluar;
 
 class Barang extends Model
 {
@@ -27,9 +28,16 @@ class Barang extends Model
         return $this->belongsTo(Kategori::class, 'kategori_id');
     }
 
+    // riwayat barang masuk (FK: barang_masuk.barang_id)
     public function barangMasuk()
     {
         return $this->hasMany(BarangMasuk::class);
+    }
+
+    // riwayat barang keluar (FK: barang_keluar.barang_id)
+    public function barangKeluar()
+    {
+        return $this->hasMany(BarangKeluar::class);
     }
 
     public function getKategoriDisplayAttribute(): string

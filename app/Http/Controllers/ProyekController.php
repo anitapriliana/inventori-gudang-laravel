@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Proyek;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Carbon\Carbon;
 
 class ProyekController extends Controller
@@ -44,18 +45,20 @@ class ProyekController extends Controller
 
     /**
      * menampilkan detail 1 proyek + barang keluar yang dikelompokkan
+     * (dipaginasi 10 data per halaman)
      *
+     * @param Request $request
      * @param string $id
      * @return \Illuminate\View\View
      */
-    public function show(string $id)
+    public function show(Request $request, string $id)
     {
         // with('barangKeluar.barang') = ambil sekalian data barang_keluar
         // dan relasi barang di dalamnya
         $proyek = Proyek::with('barangKeluar.barang')->findOrFail($id);
 
         // Mengelompokkan barang keluar berdasarkan kombinasi barang_id dan tanggal
-        $groupedBarangKeluar = $proyek->barangKeluar
+        $grouped = $proyek->barangKeluar
             ->groupBy(function ($item) {
                 return $item->barang_id . '_' . Carbon::parse($item->tanggal)->format('Y-m-d');
             })
@@ -67,6 +70,21 @@ class ProyekController extends Controller
                 return $firstItem;
             })
             ->values();
+
+        // Pagination manual (data hasil grouping berupa collection, bukan query)
+        $perPage = 10;
+        $page = LengthAwarePaginator::resolveCurrentPage();
+
+        $groupedBarangKeluar = new LengthAwarePaginator(
+            $grouped->forPage($page, $perPage)->values(),
+            $grouped->count(),
+            $perPage,
+            $page,
+            [
+                'path'  => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
 
         return view('proyek.show', compact('proyek', 'groupedBarangKeluar'));
     }

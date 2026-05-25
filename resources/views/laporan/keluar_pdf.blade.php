@@ -76,14 +76,16 @@
             text-align: center;
         }
 
-        .text-right {
-            text-align: right;
+        /* kolom yang isinya di tengah (atas-bawah dan kiri-kanan) */
+        td.mid {
+            text-align: center;
+            vertical-align: middle;
         }
 
-        /* nama barang + merk di bawahnya */
-        .nama {
-            font-weight: bold;
-            color: #000000;
+        /* satu baris per proyek, tinggi sama biar jumlah & proyek sejajar */
+        .baris {
+            line-height: 16px;
+            white-space: nowrap;
         }
 
         .muted {
@@ -130,36 +132,41 @@
         <thead>
             <tr>
                 <th class="text-center" style="width: 5%;">No</th>
-                <th style="width: 32%;">Nama Barang</th>
-                <th class="text-right" style="width: 15%;">Total Jumlah</th>
-                <th class="text-center" style="width: 14%;">Tanggal</th>
-                <th style="width: 19%;">Proyek</th>
+                <th style="width: 25%;">Nama Barang</th>
+                <th style="width: 18%;">Merk</th>
+                <th style="width: 15%;">Jumlah</th>
+                <th style="width: 22%;">Proyek</th>
                 <th style="width: 15%;">Status</th>
             </tr>
         </thead>
         <tbody>
-            @forelse($data as $index => $d)
+            @forelse($data as $d)
                 <tr>
                     {{-- nomor --}}
-                    <td class="text-center">{{ $index + 1 }}</td>
+                    <td class="mid">{{ $loop->iteration }}</td>
 
-                    {{-- nama barang + merk --}}
+                    {{-- nama barang --}}
+                    <td class="mid">{{ $d->barang->nama_barang ?? 'Barang tidak ditemukan' }}</td>
+
+                    {{-- merk --}}
+                    <td class="mid">{{ $d->barang->merk ?? '-' }}</td>
+
+                    {{-- jumlah per proyek (satu angka per baris, sejajar dengan kolom proyek) --}}
                     <td>
-                        <div class="nama">{{ $d->barang->nama_barang ?? 'Barang tidak ditemukan' }}</div>
-                        <div class="muted">Merk: {{ $d->barang->merk ?? '-' }}</div>
+                        @foreach ($d->rincian as $r)
+                            <div class="baris">{{ floatval($r->total_jumlah) }} {{ $d->barang->satuan ?? '' }}</div>
+                        @endforeach
                     </td>
 
-                    {{-- total jumlah terakumulasi --}}
-                    <td class="text-right">{{ $d->total_jumlah }} {{ $d->barang->satuan ?? '-' }}</td>
-
-                    {{-- tanggal --}}
-                    <td class="text-center">{{ date('d/m/Y', strtotime($d->tanggal)) }}</td>
-
-                    {{-- proyek --}}
-                    <td>{{ $d->proyek->nama_proyek ?? '-' }}</td>
+                    {{-- proyek (satu nama per baris) --}}
+                    <td>
+                        @foreach ($d->rincian as $r)
+                            <div class="baris">{{ $r->proyek->nama_proyek ?? '-' }}</div>
+                        @endforeach
+                    </td>
 
                     {{-- status + alasan retur --}}
-                    <td>
+                    <td class="mid">
                         @if ($d->status === 'returned')
                             <span class="status-retur">Retur</span>
                             @if ($d->gabungan_alasan)

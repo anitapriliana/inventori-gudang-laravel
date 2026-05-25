@@ -5,6 +5,12 @@
 @section('title', $proyek->nama_proyek)
 
 @section('content')
+    @php
+        // data bahan keluar; $paginated true kalau controller sudah pakai paginate()
+        $items = $groupedBarangKeluar ?? $proyek->barangKeluar;
+        $paginated = $items instanceof \Illuminate\Contracts\Pagination\LengthAwarePaginator;
+    @endphp
+
     <div class="space-y-6">
 
         {{-- header halaman --}}
@@ -88,11 +94,12 @@
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
-                        @forelse($groupedBarangKeluar ?? $proyek->barangKeluar as $index =>$item)
+                        @forelse($items as $item)
                             <tr class="hover:bg-gray-50 transition-colors duration-150">
 
+                                {{-- nomor (lanjut antar halaman kalau dipaginasi) --}}
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-500">
-                                    {{ $index + 1 }}
+                                    {{ $paginated ? $items->firstItem() + $loop->index : $loop->iteration }}
                                 </td>
 
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
@@ -148,6 +155,56 @@
                 </table>
             </div>
         </div>
+
+        {{-- pagination (di luar tabel, rata tengah) --}}
+        @if ($paginated && $items->hasPages())
+            @php
+                // biar query string tetap kebawa pas pindah halaman
+                $items->appends(request()->query());
+
+                // class tombol, disalin persis dari desain lo
+                $btnPrev =
+                    'rounded-full border border-slate-300 py-2 px-3 text-center text-sm transition-all shadow-sm hover:shadow-lg text-slate-600 hover:text-white hover:bg-slate-800 hover:border-slate-800 focus:text-white focus:bg-slate-800 focus:border-slate-800 active:border-slate-800 active:text-white active:bg-slate-800 disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none ml-2';
+                $btnNext =
+                    'min-w-9 rounded-full border border-slate-300 py-2 px-3 text-center text-sm transition-all shadow-sm hover:shadow-lg text-slate-600 hover:text-white hover:bg-slate-800 hover:border-slate-800 focus:text-white focus:bg-slate-800 focus:border-slate-800 active:border-slate-800 active:text-white active:bg-slate-800 disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none ml-2';
+                $btnAngka =
+                    'min-w-9 rounded-full border border-slate-300 py-2 px-3.5 text-center text-sm transition-all shadow-sm hover:shadow-lg text-slate-600 hover:text-white hover:bg-slate-800 hover:border-slate-800 focus:text-white focus:bg-slate-800 focus:border-slate-800 active:border-slate-800 active:text-white active:bg-slate-800 disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none ml-2';
+                $btnAktif =
+                    'min-w-9 rounded-full bg-slate-800 py-2 px-3.5 border border-transparent text-center text-sm text-white transition-all shadow-md hover:shadow-lg focus:bg-slate-700 focus:shadow-none active:bg-slate-700 hover:bg-slate-700 active:shadow-none disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none ml-2';
+
+                // tampilkan maksimal 5 nomor di sekitar halaman aktif
+                $awal = max(1, $items->currentPage() - 2);
+                $akhir = min($items->lastPage(), $items->currentPage() + 2);
+            @endphp
+
+            <nav role="navigation" aria-label="Pagination" class="flex justify-center">
+                <div class="flex space-x-1">
+
+                    {{-- prev (di halaman pertama jadi button disabled) --}}
+                    @if ($items->onFirstPage())
+                        <button type="button" disabled class="{{ $btnPrev }}">Prev</button>
+                    @else
+                        <a href="{{ $items->previousPageUrl() }}" class="{{ $btnPrev }}">Prev</a>
+                    @endif
+
+                    {{-- nomor halaman --}}
+                    @for ($i = $awal; $i <= $akhir; $i++)
+                        @if ($i == $items->currentPage())
+                            <span aria-current="page" class="{{ $btnAktif }}">{{ $i }}</span>
+                        @else
+                            <a href="{{ $items->url($i) }}" class="{{ $btnAngka }}">{{ $i }}</a>
+                        @endif
+                    @endfor
+
+                    {{-- next (di halaman terakhir jadi button disabled) --}}
+                    @if ($items->hasMorePages())
+                        <a href="{{ $items->nextPageUrl() }}" class="{{ $btnNext }}">Next</a>
+                    @else
+                        <button type="button" disabled class="{{ $btnNext }}">Next</button>
+                    @endif
+                </div>
+            </nav>
+        @endif
     </div>
 
     {{-- Modal Form Kembalikan Sisa Barang --}}
@@ -161,7 +218,8 @@
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Jumlah Sisa yang Dikembalikan</label>
-                        <input type="number" name="jumlah_kembali" id="jumlah_kembali" min="1" required
+                        <input type="number" name="jumlah_kembali" id="jumlah_kembali" min="0.01" step="any"
+                            max="{{ $item->jumlah }}" required
                             class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4C7A94]">
                     </div>
 
